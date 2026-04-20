@@ -17,10 +17,17 @@ mkdir -p "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/PersonalSTT"
 cp Info.plist "$APP/Contents/Info.plist"
 
+echo "▶ rendering icon"
+ICONSET="build/AppIcon.iconset"
+rm -rf "$ICONSET"
+swift Tools/MakeIcon.swift "$ICONSET" > /dev/null
+iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
+rm -rf "$ICONSET"
+
 # Ad-hoc codesign so TCC (mic / input monitoring / accessibility) remembers the binary identity.
 codesign --force --deep --sign - "$APP"
 
 echo "✔ built: $APP"
 echo
-echo "Run once from Finder (or: open $APP) — macOS will ask for Microphone, Input Monitoring, Accessibility."
-echo "If a prompt doesn't appear: System Settings → Privacy & Security → grant manually."
+echo "Install to /Applications (recommended): ./install.sh"
+echo "Or run once from Finder: open $APP"

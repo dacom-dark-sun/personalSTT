@@ -26,9 +26,12 @@ Native Swift + AppKit. Single binary, no Electron, no npm, no services. Transcri
 ```bash
 git clone https://github.com/dacom-dark-sun/personalSTT.git
 cd personalSTT
-./build.sh
-open build/personal-stt.app
+./install.sh
 ```
+
+This builds, copies `personal-stt.app` to `/Applications`, and launches it.
+
+(If you prefer to run from the build dir without installing: `./build.sh && open build/personal-stt.app`.)
 
 On first launch macOS will ask for three permissions — all required:
 
@@ -85,7 +88,7 @@ Hotkeys are fixed (Right ⌥ hold / Right ⌘+⌥ toggle) — not configurable.
 
 ## Autostart on login
 
-Open *🎙 → Settings…* and tick **Launch at login**. The app is registered via `SMAppService` (macOS 13+) and appears in *System Settings → General → Login Items*, where you can also toggle it manually.
+Open *🎙 → Settings…* and tick **Launch at login**. The app is registered via `SMAppService` (macOS 13+) and appears in *System Settings → General → Login Items*, where you can also toggle it manually. For this to survive a reboot the `.app` must live at a stable path — that's why `install.sh` puts it in `/Applications`.
 
 ## How it works
 
@@ -116,13 +119,16 @@ Project layout:
 
 ```
 Package.swift              SwiftPM manifest (macOS 13+ executable)
-Info.plist                 LSUIElement, mic usage string
-build.sh                   swift build -c release + .app bundle + ad-hoc codesign
+Info.plist                 LSUIElement, mic usage string, icon ref
+build.sh                   swift build -c release + .app bundle + icon + codesign
+install.sh                 build + copy to /Applications + launch
+Tools/MakeIcon.swift       Procedural iconset generator (charcoal squircle + mic glyph)
 Sources/PersonalSTT/
   App.swift                NSApplicationDelegate, status item, lifecycle
   Settings.swift           Settings window (NSGridView form)
+  LaunchAtLogin.swift      SMAppService.mainApp wrapper
   Config.swift             env + ~/.config/personal-stt/config.json
-  Hotkey.swift             CGEventTap push-to-talk (modifier-only hold)
+  Hotkey.swift             CGEventTap: Right ⌥ hold / Right ⌘+⌥ toggle
   AudioCapture.swift       AVAudioEngine → 16 kHz mono Int16 → WAV
   Transcriber.swift        Whisper API multipart POST
   TextInjector.swift       CGEvent.keyboardSetUnicodeString

@@ -1,5 +1,7 @@
 .build/
 build/
+*.iconset/
+*.icns
 .swiftpm/
 Package.resolved
 DerivedData/
