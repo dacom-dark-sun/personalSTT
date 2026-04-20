@@ -21,8 +21,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         hotkey.start()
 
         if config.apiKey.isEmpty {
-            notify(title: "personal-stt",
-                   body: "OPENAI_API_KEY not set. Export it or put it in ~/.config/personal-stt/config.json")
+            warn("OPENAI_API_KEY not set. Export it or put it in ~/.config/personal-stt/config.json")
         }
     }
 
@@ -54,8 +53,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         AVCaptureDevice.requestAccess(for: .audio) { granted in
             if !granted {
                 DispatchQueue.main.async { [weak self] in
-                    self?.notify(title: "personal-stt",
-                                 body: "Microphone access denied. Enable in System Settings → Privacy.")
+                    self?.warn("Microphone access denied. Enable in System Settings → Privacy.")
                 }
             }
         }
@@ -69,7 +67,7 @@ final class AppController: NSObject, NSApplicationDelegate {
             overlay.show()
         } catch {
             Sounds.error()
-            notify(title: "personal-stt", body: "Recording failed: \(error.localizedDescription)")
+            warn("Recording failed: \(error.localizedDescription)")
         }
     }
 
@@ -91,22 +89,24 @@ final class AppController: NSObject, NSApplicationDelegate {
             } catch {
                 await MainActor.run {
                     Sounds.error()
-                    self.notify(title: "personal-stt", body: "Whisper: \(error.localizedDescription)")
+                    self.warn("Whisper: \(error.localizedDescription)")
                 }
             }
         }
     }
 
-    private func notify(title: String, body: String) {
-        let n = NSUserNotification()
-        n.title = title
-        n.informativeText = body
-        NSUserNotificationCenter.default.deliver(n)
+    private func warn(_ message: String) {
+        NSLog("personal-stt: %@", message)
     }
 }
 
-// Entry point
-let app = NSApplication.shared
-let controller = AppController()
-app.delegate = controller
-app.run()
+@main
+enum Main {
+    static let controller = AppController()
+
+    static func main() {
+        let app = NSApplication.shared
+        app.delegate = controller
+        app.run()
+    }
+}
