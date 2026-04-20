@@ -9,6 +9,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private var baseURLField: NSTextField!
     private var modelField: NSTextField!
     private var languageField: NSTextField!
+    private var loginToggle: NSButton!
 
     init(config: Config, onChange: @escaping () -> Void) {
         self.config = config
@@ -74,6 +75,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             grid.row(at: i).yPlacement = .center
         }
 
+        loginToggle = NSButton(checkboxWithTitle: "Launch at login",
+                               target: self,
+                               action: #selector(toggleLaunchAtLogin))
+        loginToggle.state = LaunchAtLogin.isEnabled ? .on : .off
+        loginToggle.font = .systemFont(ofSize: 12, weight: .regular)
+        loginToggle.translatesAutoresizingMaskIntoConstraints = false
+
         let doneBtn = NSButton(title: "Done", target: self, action: #selector(done))
         doneBtn.bezelStyle = .rounded
         doneBtn.keyEquivalent = "\r"
@@ -82,6 +90,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         content.addSubview(heading)
         content.addSubview(hint)
         content.addSubview(grid)
+        content.addSubview(loginToggle)
         content.addSubview(doneBtn)
 
         NSLayoutConstraint.activate([
@@ -95,7 +104,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             grid.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 32),
             grid.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -32),
 
-            doneBtn.topAnchor.constraint(greaterThanOrEqualTo: grid.bottomAnchor, constant: 28),
+            loginToggle.topAnchor.constraint(equalTo: grid.bottomAnchor, constant: 22),
+            loginToggle.leadingAnchor.constraint(equalTo: apiKeyField.leadingAnchor),
+
+            doneBtn.topAnchor.constraint(greaterThanOrEqualTo: loginToggle.bottomAnchor, constant: 22),
             doneBtn.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -32),
             doneBtn.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -24),
             doneBtn.widthAnchor.constraint(greaterThanOrEqualToConstant: 96),
@@ -136,6 +148,18 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     // MARK: - Actions
 
+    @objc private func toggleLaunchAtLogin() {
+        let wantOn = loginToggle.state == .on
+        do {
+            try LaunchAtLogin.set(wantOn)
+            NSLog("personal-stt: launch-at-login → %@", wantOn ? "enabled" : "disabled")
+        } catch {
+            NSLog("personal-stt: launch-at-login failed: %@", error.localizedDescription)
+            // Revert the checkbox to whatever the system actually thinks.
+            loginToggle.state = LaunchAtLogin.isEnabled ? .on : .off
+        }
+    }
+
     @objc private func done() {
         commitFields()
         window?.performClose(nil)
@@ -164,6 +188,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     // MARK: - Lifecycle
 
     func show() {
+        // Sync checkbox with live system state in case the user toggled it
+        // from System Settings → General → Login Items since last shown.
+        loginToggle?.state = LaunchAtLogin.isEnabled ? .on : .off
+
         NSApp.activate(ignoringOtherApps: true)
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)

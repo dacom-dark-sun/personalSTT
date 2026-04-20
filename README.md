@@ -85,7 +85,7 @@ Hotkeys are fixed (Right ⌥ hold / Right ⌘+⌥ toggle) — not configurable.
 
 ## Autostart on login
 
-Drag `build/personal-stt.app` into *System Settings → General → Login Items*.
+Open *🎙 → Settings…* and tick **Launch at login**. The app is registered via `SMAppService` (macOS 13+) and appears in *System Settings → General → Login Items*, where you can also toggle it manually.
 
 ## How it works
 
