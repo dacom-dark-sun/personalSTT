@@ -40,6 +40,9 @@ final class Transcriber {
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
         req.httpBody = body
 
+        NSLog("personal-stt: POST %@ (wav=%d bytes, model=%@, lang=%@)",
+              url.absoluteString, wav.count, config.model, config.language)
+
         let (data, resp) = try await URLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse else {
             throw NSError(domain: "Transcriber", code: 2,
@@ -50,7 +53,10 @@ final class Transcriber {
             throw NSError(domain: "Transcriber", code: http.statusCode,
                           userInfo: [NSLocalizedDescriptionKey: "Whisper HTTP \(http.statusCode): \(txt)"])
         }
-        let text = String(data: data, encoding: .utf8) ?? ""
-        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = (String(data: data, encoding: .utf8) ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        NSLog("personal-stt: whisper → %d chars: %@",
+              text.count, String(text.prefix(120)))
+        return text
     }
 }

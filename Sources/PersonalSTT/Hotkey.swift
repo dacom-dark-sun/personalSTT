@@ -4,9 +4,9 @@ import AppKit
 
 /// Global push-to-talk watcher using a CGEvent tap.
 /// Detects modifier-only hold: press the configured modifier alone → start;
-/// release it → stop.
+/// release → stop.
 final class Hotkey {
-    private let spec: HotkeySpec
+    private var spec: HotkeySpec
     private var tap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var pressed = false
@@ -17,9 +17,10 @@ final class Hotkey {
     init(spec: HotkeySpec) { self.spec = spec }
 
     func start() {
+        stop()
+
         let mask: CGEventMask = (1 << CGEventType.flagsChanged.rawValue) |
                                 (1 << CGEventType.keyDown.rawValue)
-
         let refcon = Unmanaged.passUnretained(self).toOpaque()
 
         guard let tap = CGEvent.tapCreate(
@@ -35,7 +36,7 @@ final class Hotkey {
             },
             userInfo: refcon
         ) else {
-            NSLog("personal-stt: failed to create CGEvent tap. Grant Input Monitoring permission in System Settings → Privacy & Security.")
+            NSLog("personal-stt: failed to create CGEvent tap. Grant Input Monitoring in System Settings.")
             return
         }
 
@@ -44,6 +45,24 @@ final class Hotkey {
         self.runLoopSource = src
         CFRunLoopAddSource(CFRunLoopGetMain(), src, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
+        NSLog("personal-stt: hotkey tap active (mask=0x%llx)", spec.modifierMask)
+    }
+
+    func stop() {
+        if let tap = tap {
+            CGEvent.tapEnable(tap: tap, enable: false)
+        }
+        if let src = runLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), src, .commonModes)
+        }
+        tap = nil
+        runLoopSource = nil
+        pressed = false
+    }
+
+    func updateSpec(_ spec: HotkeySpec) {
+        self.spec = spec
+        start()
     }
 
     private func handle(type: CGEventType, event: CGEvent) {
