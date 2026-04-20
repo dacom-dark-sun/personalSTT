@@ -40,7 +40,9 @@ If a prompt doesn't appear automatically, grant manually in *System Settings →
 
 ## Config
 
-Either export env vars before launch, or create `~/.config/personal-stt/config.json`:
+Open *🎙 → Settings…* (⌘,) to edit. All values are saved to `~/.config/personal-stt/config.json` (chmod 600).
+
+For scripted setup, the file format is:
 
 ```json
 {
@@ -51,6 +53,8 @@ Either export env vars before launch, or create `~/.config/personal-stt/config.j
   "hotkey": "right_option"
 }
 ```
+
+Env vars (read at launch only, overridden by Settings edits that save to the file):
 
 | env var | json key | default |
 |---|---|---|
@@ -96,8 +100,8 @@ Drag `build/personal-stt.app` into *System Settings → General → Login Items*
 │    multipart: file=audio.wav, model, language, text        │
 │                                                       │    │
 │  TextInjector (on success):                           ▼    │
-│    CGEvent.keyboardSetUnicodeString → focused input        │
-│    of the frontmost app (no clipboard write)               │
+│    CGEvent.keyboardSetUnicodeString via .cghidEventTap     │
+│    → focused input of the frontmost app (no clipboard)     │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -109,7 +113,8 @@ Info.plist                 LSUIElement, mic usage string
 build.sh                   swift build -c release + .app bundle + ad-hoc codesign
 Sources/PersonalSTT/
   App.swift                NSApplicationDelegate, status item, lifecycle
-  Config.swift             env + ~/.config/personal-stt/config.json loader
+  Settings.swift           Settings window (NSGridView form)
+  Config.swift             env + ~/.config/personal-stt/config.json
   Hotkey.swift             CGEventTap push-to-talk (modifier-only hold)
   AudioCapture.swift       AVAudioEngine → 16 kHz mono Int16 → WAV
   Transcriber.swift        Whisper API multipart POST
@@ -136,12 +141,10 @@ log stream --predicate 'eventMessage CONTAINS "personal-stt"' --info
 **Option C — Console.app:**
 *Menu bar 🎙 → Open Console (live logs)* — then filter by `personal-stt`.
 
-The menu also has **Test text injection**: click it, focus any input within 1.5 seconds, and the app will type `personal-stt test ✓` into it. Handy for verifying Accessibility permission is working without recording audio.
-
 ## Troubleshooting
 
 - **Hotkey does nothing** — check *System Settings → Privacy & Security → Input Monitoring*. The `.app` must be listed and enabled. After granting, relaunch the app.
-- **Text doesn't appear in the focused field** — *Privacy & Security → Accessibility* must be enabled for the app. After granting, **fully quit and relaunch** (TCC caches the old trust decision per process). Use **Test text injection** from the menu to verify without recording.
+- **Text doesn't appear in the focused field** — *Privacy & Security → Accessibility* must be enabled for the app. After granting, **fully quit and relaunch** (TCC caches the old trust decision per process).
 - **"OPENAI_API_KEY not set" notification** — key wasn't loaded. If you set it only in your shell rc, launching from Finder won't see it; put it in `~/.config/personal-stt/config.json` instead.
 - **Whisper HTTP 401/403** — bad key or the key lacks audio access.
 - **No sound on start/stop** — your system alert sound is muted (*System Settings → Sound*).
