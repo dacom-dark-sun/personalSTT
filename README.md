@@ -86,6 +86,22 @@ Hotkeys are fixed (Right ⌥ hold / Right ⌘+⌥ toggle) — not configurable.
 - Release both keys — recording continues.
 - Press **Right ⌥** again (alone) to stop. Transcription is typed into whatever you've focused by then.
 
+## Upgrading / after each rebuild
+
+The app is **ad-hoc codesigned** (no Apple Developer account needed) — which means every `./build.sh` produces a new signature hash. macOS TCC keys permissions on that hash, so after updating the hotkey can silently stop firing and text injection silently stop working, with no error visible.
+
+After `git pull && ./install.sh`, if things misbehave:
+
+1. Open *System Settings → Privacy & Security* and **remove** the previous `personal-stt` / `PersonalSTT` entries (the `−` button) from:
+   - **Microphone**
+   - **Input Monitoring**
+   - **Accessibility**
+2. Fully quit any running instance: menu-bar → *Quit*, or `killall PersonalSTT`.
+3. Launch `/Applications/personal-stt.app` — macOS will re-prompt for all three permissions. Grant them.
+4. Quit and launch one more time — TCC caches the old trust decision per process, so the relaunch is needed for the new permissions to take effect everywhere.
+
+tl;dr: after each update, clear the three stale entries, relaunch, re-grant.
+
 ## Autostart on login
 
 Open *🎙 → Settings…* and tick **Launch at login**. The app is registered via `SMAppService` (macOS 13+) and appears in *System Settings → General → Login Items*, where you can also toggle it manually. For this to survive a reboot the `.app` must live at a stable path — that's why `install.sh` puts it in `/Applications`.

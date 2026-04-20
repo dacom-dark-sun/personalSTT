@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import ApplicationServices
 
 final class AppController: NSObject, NSApplicationDelegate {
     private let config = Config.load()
@@ -18,6 +19,7 @@ final class AppController: NSObject, NSApplicationDelegate {
 
         setupMenu()
         requestMicPermission()
+        requestAccessibilityPermission()
 
         hotkey.onStart = { [weak self] in self?.startRecording() }
         hotkey.onStop  = { [weak self] in self?.stopAndTranscribe() }
@@ -69,6 +71,18 @@ final class AppController: NSObject, NSApplicationDelegate {
                 NSLog("personal-stt: microphone access denied")
             }
         }
+    }
+
+    /// Triggers the Accessibility permission prompt eagerly on launch — otherwise
+    /// macOS only shows it the first time we try to post synthesized keystrokes,
+    /// which means the first transcription silently fails because the permission
+    /// dialog appears too late to gate the CGEvent post.
+    private func requestAccessibilityPermission() {
+        let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
+        let options: NSDictionary = [key: true]
+        let trusted = AXIsProcessTrustedWithOptions(options)
+        NSLog("personal-stt: accessibility trusted = %@",
+              trusted ? "yes" : "no (system prompt shown)")
     }
 
     private func startRecording() {
