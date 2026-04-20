@@ -28,7 +28,10 @@ final class Hotkey {
     func start() {
         stop()
 
-        let mask: CGEventMask = 1 << CGEventType.flagsChanged.rawValue
+        let mask: CGEventMask =
+            (1 << CGEventType.flagsChanged.rawValue) |
+            (1 << CGEventType.tapDisabledByTimeout.rawValue) |
+            (1 << CGEventType.tapDisabledByUserInput.rawValue)
         let refcon = Unmanaged.passUnretained(self).toOpaque()
 
         guard let tap = CGEvent.tapCreate(
@@ -68,6 +71,12 @@ final class Hotkey {
     }
 
     private func handle(type: CGEventType, event: CGEvent) {
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            if let tap = tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            NSLog("personal-stt: hotkey tap re-enabled after %@",
+                  type == .tapDisabledByTimeout ? "timeout" : "user input")
+            return
+        }
         guard type == .flagsChanged else { return }
 
         let raw = UInt64(event.flags.rawValue)
