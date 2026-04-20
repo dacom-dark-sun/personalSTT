@@ -9,14 +9,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private var baseURLField: NSTextField!
     private var modelField: NSTextField!
     private var languageField: NSTextField!
-    private var hotkeyPopup: NSPopUpButton!
 
     init(config: Config, onChange: @escaping () -> Void) {
         self.config = config
         self.onChange = onChange
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 460, height: 360),
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 340),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -48,34 +47,23 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         heading.textColor = .labelColor
         heading.translatesAutoresizingMaskIntoConstraints = false
 
-        apiKeyField = makeSecureField(current: config.apiKey, placeholder: "sk-…")
-        baseURLField = makeField(current: config.baseURL, placeholder: "https://api.openai.com/v1")
-        modelField = makeField(current: config.model, placeholder: "whisper-1")
-        languageField = makeField(current: config.language, placeholder: "ru")
+        let hint = NSTextField(labelWithString:
+            "Hold Right ⌥ to dictate · Right ⌘ + ⌥ to toggle"
+        )
+        hint.font = .systemFont(ofSize: 11, weight: .regular)
+        hint.textColor = .tertiaryLabelColor
+        hint.translatesAutoresizingMaskIntoConstraints = false
 
-        hotkeyPopup = NSPopUpButton(frame: .zero, pullsDown: false)
-        hotkeyPopup.translatesAutoresizingMaskIntoConstraints = false
-        hotkeyPopup.bezelStyle = .rounded
-        for choice in HotkeySpec.choices {
-            hotkeyPopup.addItem(withTitle: choice.title)
-            if let item = hotkeyPopup.item(withTitle: choice.title) {
-                item.representedObject = choice.value
-            }
-            if choice.value == config.hotkeyRaw {
-                if let item = hotkeyPopup.item(withTitle: choice.title) {
-                    hotkeyPopup.select(item)
-                }
-            }
-        }
-        hotkeyPopup.target = self
-        hotkeyPopup.action = #selector(hotkeyChanged)
+        apiKeyField   = makeSecureField(current: config.apiKey,   placeholder: "sk-…")
+        baseURLField  = makeField(      current: config.baseURL,  placeholder: "https://api.openai.com/v1")
+        modelField    = makeField(      current: config.model,    placeholder: "whisper-1")
+        languageField = makeField(      current: config.language, placeholder: "ru")
 
         let grid = NSGridView(views: [
             [makeLabel("API Key"),  apiKeyField],
             [makeLabel("Base URL"), baseURLField],
             [makeLabel("Model"),    modelField],
             [makeLabel("Language"), languageField],
-            [makeLabel("Hotkey"),   hotkeyPopup],
         ])
         grid.translatesAutoresizingMaskIntoConstraints = false
         grid.rowSpacing = 14
@@ -92,6 +80,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         doneBtn.translatesAutoresizingMaskIntoConstraints = false
 
         content.addSubview(heading)
+        content.addSubview(hint)
         content.addSubview(grid)
         content.addSubview(doneBtn)
 
@@ -99,7 +88,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             heading.topAnchor.constraint(equalTo: content.topAnchor, constant: 40),
             heading.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 32),
 
-            grid.topAnchor.constraint(equalTo: heading.bottomAnchor, constant: 28),
+            hint.topAnchor.constraint(equalTo: heading.bottomAnchor, constant: 4),
+            hint.leadingAnchor.constraint(equalTo: heading.leadingAnchor),
+
+            grid.topAnchor.constraint(equalTo: hint.bottomAnchor, constant: 24),
             grid.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 32),
             grid.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -32),
 
@@ -144,13 +136,6 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     // MARK: - Actions
 
-    @objc private func hotkeyChanged() {
-        if let raw = hotkeyPopup.selectedItem?.representedObject as? String {
-            config.updateHotkey(raw)
-            persist()
-        }
-    }
-
     @objc private func done() {
         commitFields()
         window?.performClose(nil)
@@ -171,10 +156,6 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
         config.language = languageField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        persist()
-    }
-
-    private func persist() {
         do { try config.save() }
         catch { NSLog("personal-stt: config save failed: %@", error.localizedDescription) }
         onChange()

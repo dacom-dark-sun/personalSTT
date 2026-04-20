@@ -2,25 +2,33 @@ import Foundation
 import CoreGraphics
 import AppKit
 
-/// Global push-to-talk watcher using a CGEvent tap.
-/// Detects modifier-only hold: press the configured modifier alone → start;
-/// release → stop.
+/// Fixed two-mode global push-to-talk watcher via a CGEvent tap.
+///
+/// - **Hold mode** — press Right Option alone to start; release to stop.
+/// - **Toggle mode** — press Right Command + Right Option together to start;
+///   recording continues after release. Press Right Option again (alone) to stop.
 final class Hotkey {
-    private var spec: HotkeySpec
+    /// Recording should begin (either mode).
+    var onStart: (() -> Void)?
+    /// Recording should end (either mode).
+    var onStop: (() -> Void)?
+
+    private enum State { case idle, hold, toggle }
+    private var state: State = .idle
+    private var rightOptionDown = false
+
+    // CGEventFlags bit masks. The low byte is the "device-dependent" bit
+    // distinguishing left vs. right modifier on the same physical modifier.
+    private let rightOptionMask: UInt64  = 0x00080040
+    private let rightCommandMask: UInt64 = 0x00100010
+
     private var tap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
-    private var pressed = false
-
-    var onPress: (() -> Void)?
-    var onRelease: (() -> Void)?
-
-    init(spec: HotkeySpec) { self.spec = spec }
 
     func start() {
         stop()
 
-        let mask: CGEventMask = (1 << CGEventType.flagsChanged.rawValue) |
-                                (1 << CGEventType.keyDown.rawValue)
+        let mask: CGEventMask = 1 << CGEventType.flagsChanged.rawValue
         let refcon = Unmanaged.passUnretained(self).toOpaque()
 
         guard let tap = CGEvent.tapCreate(
@@ -45,38 +53,57 @@ final class Hotkey {
         self.runLoopSource = src
         CFRunLoopAddSource(CFRunLoopGetMain(), src, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
-        NSLog("personal-stt: hotkey tap active (mask=0x%llx)", spec.modifierMask)
+        NSLog("personal-stt: hotkey tap active (right-option hold, right-cmd+right-option toggle)")
     }
 
     func stop() {
-        if let tap = tap {
-            CGEvent.tapEnable(tap: tap, enable: false)
-        }
+        if let tap = tap { CGEvent.tapEnable(tap: tap, enable: false) }
         if let src = runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), src, .commonModes)
         }
         tap = nil
         runLoopSource = nil
-        pressed = false
-    }
-
-    func updateSpec(_ spec: HotkeySpec) {
-        self.spec = spec
-        start()
+        state = .idle
+        rightOptionDown = false
     }
 
     private func handle(type: CGEventType, event: CGEvent) {
         guard type == .flagsChanged else { return }
 
         let raw = UInt64(event.flags.rawValue)
-        let isDown = (raw & spec.modifierMask) == spec.modifierMask
+        let rOpt = (raw & rightOptionMask)  == rightOptionMask
+        let rCmd = (raw & rightCommandMask) == rightCommandMask
 
-        if isDown && !pressed {
-            pressed = true
-            DispatchQueue.main.async { [weak self] in self?.onPress?() }
-        } else if !isDown && pressed {
-            pressed = false
-            DispatchQueue.main.async { [weak self] in self?.onRelease?() }
+        let justPressed  = rOpt && !rightOptionDown
+        let justReleased = !rOpt && rightOptionDown
+        rightOptionDown = rOpt
+
+        if justPressed {
+            switch state {
+            case .idle:
+                if rCmd {
+                    state = .toggle
+                    NSLog("personal-stt: hotkey → toggle mode start")
+                    DispatchQueue.main.async { [weak self] in self?.onStart?() }
+                } else {
+                    state = .hold
+                    NSLog("personal-stt: hotkey → hold mode start")
+                    DispatchQueue.main.async { [weak self] in self?.onStart?() }
+                }
+            case .toggle:
+                state = .idle
+                NSLog("personal-stt: hotkey → toggle mode stop")
+                DispatchQueue.main.async { [weak self] in self?.onStop?() }
+            case .hold:
+                break
+            }
+            return
+        }
+
+        if justReleased, state == .hold {
+            state = .idle
+            NSLog("personal-stt: hotkey → hold mode stop")
+            DispatchQueue.main.async { [weak self] in self?.onStop?() }
         }
     }
 }

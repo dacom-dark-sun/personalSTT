@@ -5,25 +5,22 @@ final class AppController: NSObject, NSApplicationDelegate {
     private let config = Config.load()
     private let audio = AudioCapture()
     private let overlay = RecordingOverlay()
+    private let hotkey = Hotkey()
     private lazy var transcriber = Transcriber(config: config)
-    private lazy var hotkey = Hotkey(spec: config.hotkey)
-    private lazy var settings = SettingsWindowController(config: config) { [weak self] in
-        self?.applySettingsChange()
-    }
+    private lazy var settings = SettingsWindowController(config: config) { }
 
     private var statusItem: NSStatusItem!
     private var busy = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        NSLog("personal-stt: launched, hotkey=%@ model=%@ lang=%@",
-              config.hotkeyRaw, config.model, config.language)
+        NSLog("personal-stt: launched, model=%@ lang=%@", config.model, config.language)
 
         setupMenu()
         requestMicPermission()
 
-        hotkey.onPress = { [weak self] in self?.startRecording() }
-        hotkey.onRelease = { [weak self] in self?.stopAndTranscribe() }
+        hotkey.onStart = { [weak self] in self?.startRecording() }
+        hotkey.onStop  = { [weak self] in self?.stopAndTranscribe() }
         hotkey.start()
 
         if config.apiKey.isEmpty {
@@ -63,10 +60,6 @@ final class AppController: NSObject, NSApplicationDelegate {
     @objc private func openSettings() { settings.show() }
 
     @objc private func quit() { NSApp.terminate(nil) }
-
-    private func applySettingsChange() {
-        hotkey.updateSpec(config.hotkey)
-    }
 
     // MARK: - Recording pipeline
 

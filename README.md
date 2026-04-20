@@ -6,7 +6,9 @@ Native Swift + AppKit. Single binary, no Electron, no npm, no services. Transcri
 
 ## Features
 
-- **Push-to-talk**: hold a modifier (default: Right Option) → records; release → transcribes and types.
+- **Two dictation modes**:
+  - **Hold** — hold **Right ⌥** to record; release to transcribe and type.
+  - **Toggle** — press **Right ⌘ + Right ⌥** together to start a hands-free session; recording continues after you release the keys. Press **Right ⌥** again to stop.
 - **Types into the active input of any app** (browser, Slack, terminal, Notes…) via synthesized keyboard events. No clipboard pollution.
 - **Audio feedback**: start/stop system sounds.
 - **Visual feedback**: floating overlay on top of all windows with a pulsing red dot and elapsed timer.
@@ -49,8 +51,7 @@ For scripted setup, the file format is:
   "api_key": "sk-...",
   "base_url": "https://api.openai.com/v1",
   "model": "whisper-1",
-  "language": "ru",
-  "hotkey": "right_option"
+  "language": "ru"
 }
 ```
 
@@ -62,19 +63,25 @@ Env vars (read at launch only, overridden by Settings edits that save to the fil
 | `OPENAI_BASE_URL` | `base_url` | `https://api.openai.com/v1` |
 | `OPENAI_WHISPER_MODEL` | `model` | `whisper-1` |
 | `OPENAI_WHISPER_LANGUAGE` | `language` | `ru` |
-| `PERSONAL_STT_HOTKEY` | `hotkey` | `right_option` |
-
-Supported hotkey values: `right_option`, `left_option`, `right_control`, `right_command`, `fn`.
 
 `base_url` can point to any OpenAI-compatible endpoint (your own proxy, Azure OpenAI, etc.).
+
+Hotkeys are fixed (Right ⌥ hold / Right ⌘+⌥ toggle) — not configurable.
 
 ## Usage
 
 1. Launch the app (🎙 appears in the menu bar).
 2. Focus any input in any app.
-3. Hold **Right Option**. A "Tink" sound plays, a red `● REC  00:00` overlay appears at the top of the screen.
-4. Speak.
-5. Release the key. A "Pop" sound plays, the overlay disappears. The transcribed text is typed into the focused input a moment later.
+
+**Hold mode** — quick dictation:
+- Hold **Right ⌥**. A "Tink" sound plays, a red `● REC  00:00` overlay appears.
+- Speak.
+- Release. A "Pop" sound plays, the overlay disappears, the transcribed text is typed into the focused input a moment later.
+
+**Toggle mode** — long, hands-free sessions:
+- Press **Right ⌘ + Right ⌥** together. Recording starts.
+- Release both keys — recording continues.
+- Press **Right ⌥** again (alone) to stop. Transcription is typed into whatever you've focused by then.
 
 ## Autostart on login
 
