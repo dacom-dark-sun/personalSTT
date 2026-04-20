@@ -1,0 +1,12 @@
+.build/
+build/
+.swiftpm/
+Package.resolved
+DerivedData/
+*.xcuserstate
+.DS_Store
+
+# Local config — never commit API keys
+config.json
+.env
+.env.*
