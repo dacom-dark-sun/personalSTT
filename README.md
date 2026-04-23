@@ -86,6 +86,16 @@ Hotkeys are fixed (Right ⌥ hold / Right ⌘+⌥ toggle) — not configurable.
 - Release both keys — recording continues.
 - Press **Right ⌥** again (alone) to stop. Transcription is typed into whatever you've focused by then.
 
+## Transcript log
+
+Every transcription is also saved to a daily markdown file:
+
+```
+~/.config/personal-stt/transcripts/YYYY-MM-DD.md
+```
+
+Latest entries are prepended to the top, timestamped. This runs on every successful Whisper response — a safety net for when focus drifts off the target input and the typed text lands nowhere. Files are `chmod 600`.
+
 ## Upgrading / after each rebuild
 
 The app is **ad-hoc codesigned** (no Apple Developer account needed) — which means every `./build.sh` produces a new signature hash. macOS TCC keys permissions on that hash, so after updating the hotkey can silently stop firing and text injection silently stop working, with no error visible.

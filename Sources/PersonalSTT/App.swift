@@ -119,6 +119,9 @@ final class AppController: NSObject, NSApplicationDelegate {
                     NSLog("personal-stt: whisper returned empty text")
                     return
                 }
+                // Log BEFORE injection — if focus has drifted and the keystrokes
+                // land nowhere, the transcript is still preserved on disk.
+                TranscriptLog.record(text)
                 await MainActor.run { TextInjector.insert(text) }
             } catch {
                 await MainActor.run {
